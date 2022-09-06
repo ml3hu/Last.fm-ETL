@@ -1,3 +1,4 @@
+from re import A
 import sqlalchemy
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
@@ -9,7 +10,6 @@ import sqlite3
 import math
 import requests_cache
 import time
-from IPython.display import clear_output
 from dotenv import load_dotenv
 import os
 
@@ -20,9 +20,11 @@ USER_AGENT = os.getenv("USER_AGENT")
 API_KEY = os.getenv("API_KEY")
 RECENT_TRACKS_LIMIT = 200
 
+requests_cache.install_cache('lastfm_cache', backend='sqlite', expire_after=21600)
+
 # Last.fm API wrapper function, takes additional parameters as array.
 # needs method parameter as argument to specify which API method to call
-def lastfm_get(payload):
+def lastfm_getRecent(payload):
     headers = {
         "user-agent": USER_AGENT
     }
@@ -31,6 +33,9 @@ def lastfm_get(payload):
     # api_key is required, preferred format is json
     payload["api_key"] = API_KEY
     payload["format"] = "json"
+    payload["method"] = "user.getrecenttracks"
+    payload["user"] = USER_AGENT
+    payload["limit"] = RECENT_TRACKS_LIMIT
 
     response = requests.get(url, headers=headers, params=payload)
     return response
@@ -42,46 +47,78 @@ def jprint(obj):
     print(text)
 
 
-# get all listening history from last.fm
-requests_cache.install_cache()
+# initialize listening history
+def init():
+    totalPages = 99999 # dummy value
 
-totalPages = 99999 # dummy value
+    results = []
 
-results = []
+    for i in range(1, totalPages):
+        if i == 1:
+            print("Requesting page " + str(i))
+        else:
+            print("Requesting page " + str(i) + " of " + str(totalPages))
 
-for i in range(1, totalPages):
-    if i == 1:
-        print("Requesting page " + str(i))
-    else:
-        print("Requesting page " + str(i) + " of " + str(totalPages))
+        r = lastfm_getRecent({"page": i })
+
+        
+        # check for errors
+        if r.status_code != 200:
+            print(r.text)
+            break
+        
+        # set total page number
+        if i == 1:
+            totalPages = int(r.json()["recenttracks"]["@attr"]["totalPages"])
+
+        results.append(r)
+
+        # check cache
+        if not getattr(r, 'from_cache', False):
+            time.sleep(0.25)
+
+        if i == totalPages:
+            print("Request complete")
+            break
     
-    # clear the output to make things neater
-    clear_output(wait = True)
+    # clean data
+    frames = [pd.DataFrame(r.json()['recenttracks']['track']) for r in results]
+    tracks = pd.concat(frames)
+    tracks = tracks.drop(["streamable","image"], axis=1)
 
-    r = lastfm_get({ "method": "user.getrecenttracks", "user": USER_AGENT, "limit": RECENT_TRACKS_LIMIT, "page": i })
+    print(tracks.head())
+    print(tracks.info())
+    print(tracks.describe())
 
+# init()
+
+# update
+def update():
+    #time variables
+    today = datetime.datetime.now()
+    yesterday = today - datetime.timedelta(days=1)
+    today_unix = int(today.timestamp())
+    yesterday_unix = int(yesterday.timestamp())
     
-    # check for errors
+    print(yesterday_unix)
+
+    print("Requesting data from " + str(yesterday))
+    r = lastfm_getRecent({ "from": yesterday_unix })
+
     if r.status_code != 200:
         print(r.text)
-        break
+        return
     
-    # set total page number
-    if i == 1:
-        totalPages = int(r.json()["recenttracks"]["@attr"]["totalPages"])
+    tracks = pd.DataFrame(r.json()['recenttracks']['track'])
 
-    results.append(r)
+    if tracks.empty:
+        print("No tracks found")
+        return
 
-    # check cache
-    if not getattr(r, 'from_cache', False):
-        time.sleep(0.25)
+    tracks = tracks.drop(["streamable","image"], axis=1)
+    jprint(r.json())
+    # print(tracks.head())
+    # print(tracks.info())
+    # print(tracks.describe())
 
-    if i == totalPages:
-        print("Request complete")
-        break
-
-r0 = results[0]
-r0_json = r0.json()
-r0_track = r0_json['recenttracks']['track']
-r0_df = pd.DataFrame(r0_track)
-print(r0_df.head())
+update()
