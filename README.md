@@ -1,2 +1,2 @@
-# Spotify-ETL
-ETL Project Using Spotify API
+# Last.fm-ETL
+ETL Project Using Last.fm
