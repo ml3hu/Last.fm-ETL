@@ -47,6 +47,25 @@ def jprint(obj):
     print(text)
 
 
+# validate dataframe
+def validate(df) -> bool:
+    if df.empty:
+        print("No tracks found")
+        return False
+
+    # Primary Key Check
+    if pd.Series(df["date"]).is_unique:
+        pass
+    else:
+        raise Exception("Primary Key Check is violated.")
+
+    # check for nulls
+    if df.isnull().values.any():
+        raise Exception("Null values found.")
+
+    print("Data valid, proceed to Load stage")
+    return True
+
 # initialize listening history
 def init():
     totalPages = 99999 # dummy value
@@ -67,6 +86,11 @@ def init():
             print(r.text)
             break
         
+        # check if dataframe is empty
+        if tracks.empty:
+            print("No tracks found")
+            return
+
         # set total page number
         if i == 1:
             totalPages = int(r.json()["recenttracks"]["@attr"]["totalPages"])
@@ -111,13 +135,14 @@ def update():
     
     tracks = pd.DataFrame(r.json()['recenttracks']['track'])
 
+    # check if dataframe is empty
     if tracks.empty:
         print("No tracks found")
         return
 
     tracks = tracks.drop(["streamable","image"], axis=1)
-    jprint(r.json())
-    # print(tracks.head())
+    # jprint(r.json())
+    print(tracks.head())
     # print(tracks.info())
     # print(tracks.describe())
 
