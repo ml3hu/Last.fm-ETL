@@ -15,10 +15,10 @@ Dimension Tables:
 `Date_DIM`
 `Time_Of_Day_DIM`
 `Track_DIM`
-`Artist_Group_Bridge`
+`Artist_Group_DIM`
 `Artist_DIM`
 
 Fact Tables:
 `Listening_Fact`
 
-The data model uses a star schema described in [The Data Warehouse Toolkit](https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/books/data-warehouse-dw-toolkit/) by Ralph Kimball and Margy Ross. The `Time_Of_Day_DIM` is kept separate from the `Date_DIM` for flexibility and ease of managenent. The `Track_DIM` is a fixed depth hierarchy modeling the relationship between tracks and albums. The `Artist_DIM` uses `Artist_Group_Bridge` as a bridge table to keep track of listening activity with multiple artists.
+The data model uses a star schema described in [The Data Warehouse Toolkit](https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/books/data-warehouse-dw-toolkit/) by Ralph Kimball and Margy Ross. The `Time_Of_Day_DIM` is kept separate from the `Date_DIM` for flexibility and ease of managenent. The `Track_DIM` is a fixed depth hierarchy modeling the relationship between tracks and albums. The `Artist_DIM` is connected to `Artist_Group_DIM` using a bridge table to keep track of listening activity with multiple artists.
