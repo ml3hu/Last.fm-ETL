@@ -22,6 +22,12 @@ RECENT_TRACKS_LIMIT = 200
 
 requests_cache.install_cache('lastfm_cache', backend='sqlite', expire_after=21600)
 
+#time variables
+today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+yesterday = today - datetime.timedelta(days=1)
+today_unix = int(today.timestamp())
+yesterday_unix = int(yesterday.timestamp())
+
 # Last.fm API wrapper function, takes additional parameters as array.
 # needs method parameter as argument to specify which API method to call
 def lastfm_getRecent(payload):
@@ -78,7 +84,7 @@ def init():
         else:
             print("Requesting page " + str(i) + " of " + str(totalPages))
 
-        r = lastfm_getRecent({"page": i })
+        r = lastfm_getRecent({"page": i , "to": today_unix})
 
         
         # check for errors
@@ -87,6 +93,7 @@ def init():
             break
         
         # check if dataframe is empty
+        tracks = pd.DataFrame(r.json()['recenttracks']['track'])
         if tracks.empty:
             print("No tracks found")
             return
@@ -118,16 +125,11 @@ def init():
 
 # update
 def update():
-    #time variables
-    today = datetime.datetime.now()
-    yesterday = today - datetime.timedelta(days=1)
-    today_unix = int(today.timestamp())
-    yesterday_unix = int(yesterday.timestamp())
     
     print(yesterday_unix)
 
     print("Requesting data from " + str(yesterday))
-    r = lastfm_getRecent({ "from": yesterday_unix })
+    r = lastfm_getRecent({ "from": yesterday_unix , "to": today_unix})
 
     if r.status_code != 200:
         print(r.text)
@@ -146,4 +148,4 @@ def update():
     # print(tracks.info())
     # print(tracks.describe())
 
-update()
+init()
