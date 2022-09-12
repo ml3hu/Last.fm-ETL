@@ -54,13 +54,13 @@ def jprint(obj):
 
 
 # validate dataframe
-def validate(df) -> bool:
+def validate(df, isInit) -> bool:
     if df.empty:
         print("No tracks found")
         return False
 
     # Primary Key Check
-    if pd.Series(df["date"]).is_unique:
+    if pd.Series(df["date.uts"]).is_unique:
         pass
     else:
         raise Exception("Primary Key Check is violated.")
@@ -68,8 +68,19 @@ def validate(df) -> bool:
     # check for nulls
     if df.isnull().values.any():
         raise Exception("Null values found.")
+    
+    dates = df["date.uts"].astype(int)
 
-    print("Data valid, proceed to Load stage")
+    # check datetime constraint
+    if isInit:
+        if dates.max() >= today_unix:
+            raise Exception("Initial load contains data from today.")
+    else:
+        if dates.max() >= today_unix:
+            raise Exception("Update contains data from today.")
+        if dates.min() < yesterday_unix:
+            raise Exception("Update contains data from before yesterday.")
+
     return True
 
 # initialize listening history
@@ -92,17 +103,16 @@ def init():
             print(r.text)
             break
         
-        # check if dataframe is empty
-        tracks = pd.DataFrame(r.json()['recenttracks']['track'])
-        if tracks.empty:
-            print("No tracks found")
-            return
+        # validate response
+        tracks = pd.DataFrame(pd.json_normalize(r.json()['recenttracks']['track']))
+        if validate(tracks, True):
+            print("Data valid, proceed to Load stage")
 
         # set total page number
         if i == 1:
             totalPages = int(r.json()["recenttracks"]["@attr"]["totalPages"])
 
-        results.append(r)
+        results.append(tracks)
 
         # check cache
         if not getattr(r, 'from_cache', False):
@@ -113,15 +123,13 @@ def init():
             break
     
     # clean data
-    frames = [pd.DataFrame(r.json()['recenttracks']['track']) for r in results]
-    tracks = pd.concat(frames)
+    tracks = pd.concat(results)
     tracks = tracks.drop(["streamable","image"], axis=1)
+
 
     print(tracks.head())
     print(tracks.info())
     print(tracks.describe())
-
-# init()
 
 # update
 def update():
@@ -131,21 +139,21 @@ def update():
     print("Requesting data from " + str(yesterday))
     r = lastfm_getRecent({ "from": yesterday_unix , "to": today_unix})
 
+    # check for errors
     if r.status_code != 200:
         print(r.text)
         return
     
-    tracks = pd.DataFrame(r.json()['recenttracks']['track'])
+    # validate response
+    tracks = pd.DataFrame(pd.json_normalize(r.json()['recenttracks']['track']))
+    if validate(tracks, True):
+        print("Data valid, proceed to Load stage")
 
-    # check if dataframe is empty
-    if tracks.empty:
-        print("No tracks found")
-        return
-
+    # clean data
     tracks = tracks.drop(["streamable","image"], axis=1)
-    # jprint(r.json())
-    print(tracks.head())
-    # print(tracks.info())
-    # print(tracks.describe())
 
-init()
+    print(tracks.head())
+    print(tracks.info())
+    print(tracks.describe())
+
+update()
