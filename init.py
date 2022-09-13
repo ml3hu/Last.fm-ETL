@@ -68,8 +68,15 @@ def init():
 
 
 # transform
+
+# tracks are in descending order.
 tracks = init()
-dates = transform.getDates(tracks)
+
+date_dim = transform.getDates(tracks)
+time_of_day_dim = transform.getTimeOfDay(tracks)
+track_dim = transform.getTracks(tracks)
+artist_dim = transform.getArtists(tracks)
+artist_group_dim = transform.getArtistGroups(tracks)
 
 
 # load
@@ -85,7 +92,7 @@ dates = transform.getDates(tracks)
 #         month INTEGER,
 #         year INTEGER,
 #         week INTEGER,
-#         weekday INTEGER
+#         day_of_week INTEGER
 #     )
 # """
 
@@ -102,8 +109,6 @@ dates = transform.getDates(tracks)
 #     CREATE TABLE IF NOT EXISTS track_dim (
 #         track_key INTEGER PRIMARY KEY,
 #         track_name VARCHAR(200),
-#         url VARCHAR(200),
-#         album_key INTEGER,
 #         album_name VARCHAR(200)
 #     )
 # """
