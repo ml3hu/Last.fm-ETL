@@ -69,14 +69,19 @@ def init():
 
 # transform
 
-# tracks are in descending order.
+# tracks are in descending date order.
 tracks = init()
 
+# stage dimensions
 date_dim = transform.getDates(tracks)
 time_of_day_dim = transform.getTimeOfDay(tracks)
 track_dim = transform.getTracks(tracks)
 artist_dim = transform.getArtists(tracks)
 artist_group_dim = transform.getArtistGroups(tracks)
+artist_group_bridge = transform.getArtistGroupBridge(artist_dim, artist_group_dim)
+
+#stage fact table
+listening_fact = transform.getListeningFact(tracks)
 
 
 # load
@@ -107,7 +112,7 @@ artist_group_dim = transform.getArtistGroups(tracks)
 
 # table_track = """
 #     CREATE TABLE IF NOT EXISTS track_dim (
-#         track_key INTEGER PRIMARY KEY,
+#         track_key TEXT PRIMARY KEY,
 #         track_name VARCHAR(200),
 #         album_name VARCHAR(200)
 #     )
