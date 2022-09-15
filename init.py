@@ -85,84 +85,94 @@ listening_fact = transform.getListeningFact(tracks)
 
 
 # load
-# engine = sqlalchemy.create_engine(functions.DATABASE_LOCATION)
-# conn = sqlite3.connect(functions.DATABASE_NAME)
-# cursor = conn.cursor()
+engine = sqlalchemy.create_engine(functions.DATABASE_LOCATION)
+conn = sqlite3.connect(functions.DATABASE_NAME)
+cursor = conn.cursor()
 
-# table_date = """
-#     CREATE TABLE IF NOT EXISTS date_dim (
-#         date_key INTEGER PRIMARY KEY,
-#         date DATE,
-#         day INTEGER,
-#         month INTEGER,
-#         year INTEGER,
-#         week INTEGER,
-#         day_of_week INTEGER
-#     )
-# """
+table_date = """
+    CREATE TABLE IF NOT EXISTS date_dim (
+        date_key INTEGER PRIMARY KEY NOT NULL,
+        date DATE NOT NULL,
+        day INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        year INTEGER NOT NULL,
+        day_of_week INTEGER NOT NULL
+    )
+"""
 
-# table_time = """
-#     CREATE TABLE IF NOT EXISTS time_of_day_dim (
-#         time_of_day_key INTEGER PRIMARY KEY,
-#         time_of_day TIME,
-#         hour INTEGER
-#     )
+table_time = """
+    CREATE TABLE IF NOT EXISTS time_of_day_dim (
+        time_of_day_key INTEGER PRIMARY KEY NOT NULL,
+        time TIME NOT NULL,
+        hour INTEGER NOT NULL
+    )
 
-# """
+"""
 
-# table_track = """
-#     CREATE TABLE IF NOT EXISTS track_dim (
-#         track_key TEXT PRIMARY KEY,
-#         track_name VARCHAR(200),
-#         album_name VARCHAR(200)
-#     )
-# """
+table_track = """
+    CREATE TABLE IF NOT EXISTS track_dim (
+        track_key VARCHAR(32) PRIMARY KEY NOT NULL,
+        track_name VARCHAR(200) NOT NULL,
+        album_name VARCHAR(200) NOT NULL
+    )
+"""
 
-# table_artist = """
-#     CREATE TABLE IF NOT EXISTS artist_dim (
-#         artist_key INTEGER PRIMARY KEY,
-#         artist_name VARCHAR(200)
-#     )
-# """
+table_artist = """
+    CREATE TABLE IF NOT EXISTS artist_dim (
+        artist_key VARCHAR(32) PRIMARY KEY NOT NULL,
+        artist_name VARCHAR(200) NOT NULL
+    )
+"""
 
-# table_artist_group = """
-#     CREATE TABLE IF NOT EXISTS artist_group_dim (
-#         artist_group_key INTEGER PRIMARY KEY,
-#         artist_group_name VARCHAR(200)
-#     )
-# """
+table_artist_group = """
+    CREATE TABLE IF NOT EXISTS artist_group_dim (
+        artist_group_key VARCHAR(32) PRIMARY KEY NOT NULL,
+        artist_group_name VARCHAR(200) NOT NULL
+    )
+"""
 
-# table_bridge = """
-#     CREATE TABLE IF NOT EXISTS artist_group_bridge (
-#         artist_group_key INTEGER,
-#         artist_key INTEGER,
-#         FOREIGN KEY (artist_group_key) REFERENCES artist_group_dim(artist_group_key),
-#         FOREIGN KEY (artist_key) REFERENCES artist_dim(artist_key)
-#     )
-# """
+table_bridge = """
+    CREATE TABLE IF NOT EXISTS artist_group_bridge (
+        artist_group_key VARCHAR(32) NOT NULL,
+        artist_key VARCHAR(32) NOT NULL,
+        FOREIGN KEY (artist_group_key) REFERENCES artist_group_dim(artist_group_key),
+        FOREIGN KEY (artist_key) REFERENCES artist_dim(artist_key)
+    )
+"""
 
-# table_fact = """
-#     CREATE TABLE IF NOT EXISTS listening_fact (
-#         date_key INTEGER,
-#         time_of_day_key INTEGER,
-#         track_key INTEGER,
-#         artist_group_key INTEGER,
-#         FOREIGN KEY (date_key) REFERENCES date_dim(date_key),
-#         FOREIGN KEY (time_of_day_key) REFERENCES time_of_day_dim(time_of_day_key),
-#         FOREIGN KEY (track_key) REFERENCES track_dim(track_key),
-#         FOREIGN KEY (artist_group_key) REFERENCES artist_group_dim(artist_group_key),
-#         PRIMARY KEY (date_key, time_of_day_key, track_key, artist_group_key)
-#     )
-# """
-# cursor.execute(table_date)
-# cursor.execute(table_time)
-# cursor.execute(table_track)
-# cursor.execute(table_artist)
-# cursor.execute(table_artist_group)
-# cursor.execute(table_bridge)
-# cursor.execute(table_fact)
+table_fact = """
+    CREATE TABLE IF NOT EXISTS listening_fact (
+        date_key INTEGER NOT NULL,
+        time_of_day_key INTEGER NOT NULL,
+        track_key VARCHAR(32) NOT NULL,
+        artist_group_key VARCHAR(32) NOT NULL,
+        FOREIGN KEY (date_key) REFERENCES date_dim(date_key),
+        FOREIGN KEY (time_of_day_key) REFERENCES time_of_day_dim(time_of_day_key),
+        FOREIGN KEY (track_key) REFERENCES track_dim(track_key),
+        FOREIGN KEY (artist_group_key) REFERENCES artist_group_dim(artist_group_key)
+    )
+"""
+cursor.execute(table_date)
+cursor.execute(table_time)
+cursor.execute(table_track)
+cursor.execute(table_artist)
+cursor.execute(table_artist_group)
+cursor.execute(table_bridge)
+cursor.execute(table_fact)
 
-# print("Opened database successfully")
+print("Opened database successfully")
 
-# try:
-#     tracks.to_sql("listening_fact", engine, index=False, if_exists='append')
+try:
+    date_dim.to_sql("date_dim", engine, index=False, if_exists='append')
+    time_of_day_dim.to_sql("time_of_day_dim", engine, index=False, if_exists='append')
+    track_dim.to_sql("track_dim", engine, index=False, if_exists='append')
+    artist_dim.to_sql("artist_dim", engine, index=False, if_exists='append')
+    artist_group_dim.to_sql("artist_group_dim", engine, index=False, if_exists='append')
+    artist_group_bridge.to_sql("artist_group_bridge", engine, index=False, if_exists='append')
+    listening_fact.to_sql("listening_fact", engine, index=False, if_exists='append')
+except:
+    print("Data already exists in the database")
+
+
+conn.close()
+print("Closed database successfully")

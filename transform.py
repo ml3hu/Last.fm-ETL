@@ -41,7 +41,7 @@ def getTracks(df):
     df["temp"] = df["track_name"] + df["album_name"]
     df["track_key"] = [hashlib.md5(key.encode('utf-8')).hexdigest() for key in df["temp"]]
     df = df.drop(columns=["temp"])
-    
+
     return df
 
 def getArtists(df):
