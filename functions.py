@@ -62,7 +62,7 @@ def validate(df, isInit, today_unix, yesterday_unix) -> bool:
     # check datetime constraint
     if isInit:
         if dates.max() >= today_unix:
-            raise Exception("Initial load contains data from today.")
+            raise Exception("Initial load contains excess data.")
     else:
         if dates.max() >= today_unix:
             raise Exception("Update contains data from today.")

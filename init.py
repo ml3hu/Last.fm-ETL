@@ -1,4 +1,3 @@
-from re import A
 import sqlalchemy
 import pandas as pd
 from sqlalchemy.orm import sessionmaker
@@ -29,7 +28,8 @@ def init():
         else:
             print("Requesting page " + str(i) + " of " + str(totalPages))
 
-        r = functions.lastfm_getRecent({"page": i , "to": today_unix})
+        r = functions.lastfm_getRecent({"page": i , "to": yesterday_unix}) 
+        #change to today_unix after testing
 
         
         # check for errors
@@ -96,7 +96,8 @@ table_date = """
         day INTEGER NOT NULL,
         month INTEGER NOT NULL,
         year INTEGER NOT NULL,
-        day_of_week INTEGER NOT NULL
+        day_of_week INTEGER NOT NULL,
+        UNIQUE (date)
     )
 """
 
@@ -104,7 +105,8 @@ table_time = """
     CREATE TABLE IF NOT EXISTS time_of_day_dim (
         time_of_day_key INTEGER PRIMARY KEY NOT NULL,
         time TIME NOT NULL,
-        hour INTEGER NOT NULL
+        hour INTEGER NOT NULL,
+        UNIQUE (time)
     )
 
 """
@@ -113,21 +115,24 @@ table_track = """
     CREATE TABLE IF NOT EXISTS track_dim (
         track_key VARCHAR(32) PRIMARY KEY NOT NULL,
         track_name VARCHAR(200) NOT NULL,
-        album_name VARCHAR(200) NOT NULL
+        album_name VARCHAR(200) NOT NULL,
+        UNIQUE(track_name, album_name)
     )
 """
 
 table_artist = """
     CREATE TABLE IF NOT EXISTS artist_dim (
         artist_key VARCHAR(32) PRIMARY KEY NOT NULL,
-        artist_name VARCHAR(200) NOT NULL
+        artist_name VARCHAR(200) NOT NULL,
+        UNIQUE(artist_name)
     )
 """
 
 table_artist_group = """
     CREATE TABLE IF NOT EXISTS artist_group_dim (
         artist_group_key VARCHAR(32) PRIMARY KEY NOT NULL,
-        artist_group_name VARCHAR(200) NOT NULL
+        artist_group_name VARCHAR(200) NOT NULL,
+        UNIQUE(artist_group_name)
     )
 """
 
@@ -136,7 +141,8 @@ table_bridge = """
         artist_group_key VARCHAR(32) NOT NULL,
         artist_key VARCHAR(32) NOT NULL,
         FOREIGN KEY (artist_group_key) REFERENCES artist_group_dim(artist_group_key),
-        FOREIGN KEY (artist_key) REFERENCES artist_dim(artist_key)
+        FOREIGN KEY (artist_key) REFERENCES artist_dim(artist_key),
+        UNIQUE(artist_group_key, artist_key)
     )
 """
 
@@ -170,8 +176,8 @@ try:
     artist_group_dim.to_sql("artist_group_dim", engine, index=False, if_exists='append')
     artist_group_bridge.to_sql("artist_group_bridge", engine, index=False, if_exists='append')
     listening_fact.to_sql("listening_fact", engine, index=False, if_exists='append')
-except:
-    print("Data already exists in the database")
+except Exception as e:
+    print(e)
 
 
 conn.close()

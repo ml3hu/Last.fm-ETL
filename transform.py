@@ -15,6 +15,8 @@ def getDates(df):
     df["day"] = pd.to_datetime(df["date"]).dt.day
     df["day_of_week"] = pd.to_datetime(df["date"]).dt.dayofweek
 
+    df = df[["date_key", "date", "day", "month", "year", "day_of_week"]]
+
     return df
 
 
@@ -28,6 +30,8 @@ def getTimeOfDay(df):
     df = df.drop(columns=["date.#text"])
     df = df.sort_values(by="time")
     df = df.drop_duplicates(ignore_index=True)
+
+    df = df[["time_of_day_key", "time", "hour"]]
     
     return df
 
@@ -42,6 +46,8 @@ def getTracks(df):
     df["track_key"] = [hashlib.md5(key.encode('utf-8')).hexdigest() for key in df["temp"]]
     df = df.drop(columns=["temp"])
 
+    df = df[["track_key", "track_name", "album_name"]]
+
     return df
 
 def getArtists(df):
@@ -54,6 +60,8 @@ def getArtists(df):
     df = df.rename(columns={"artist.#text": "artist_name"})
     df["artist_key"] = [hashlib.md5(key.encode('utf-8')).hexdigest() for key in df["artist_name"]]
 
+    df = df[["artist_key", "artist_name"]]
+
     return df
 
 def getArtistGroups(df):
@@ -63,6 +71,8 @@ def getArtistGroups(df):
     df = df.drop_duplicates(ignore_index=True)
     df = df.rename(columns={"artist.#text": "artist_group_name"})
     df["artist_group_key"] = [hashlib.md5(key.encode('utf-8')).hexdigest() for key in df["artist_group_name"]]
+
+    df = df[["artist_group_key", "artist_group_name"]]
 
     return df
 
@@ -76,6 +86,8 @@ def getArtistGroupBridge(artist_dim, artist_group_dim):
     df = df.merge(artist_dim, how="left", left_on="artist_group_name", right_on="artist_name")
     df = df.drop(columns=["artist_group_name", "artist_name"])
     df = df.drop_duplicates(ignore_index=True)
+
+    df = df[["artist_group_key", "artist_key"]]
 
     return df
 
@@ -92,5 +104,7 @@ def getListeningFact(tracks):
     df["track_key"] = [hashlib.md5(key.encode('utf-8')).hexdigest() for key in df["track_key"]]
     df["artist_group_key"] = [hashlib.md5(key.encode('utf-8')).hexdigest() for key in df["artist.#text"]]
     df = df.drop(columns=["date.#text", "name", "album.#text", "artist.#text"]) 
+
+    df = df[["date_key", "time_of_day_key", "track_key", "artist_group_key"]]
 
     return df
