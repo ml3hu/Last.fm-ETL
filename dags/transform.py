@@ -5,7 +5,11 @@ def getDates(df):
     print("Transforming Datetime Data")
 
     df = df[["date.#text"]].copy()
-    df["date"] = pd.to_datetime(df["date.#text"]).dt.date
+    #convert timezones
+    df["date"] = pd.to_datetime(df["date.#text"]).dt.tz_localize('gmt')
+    df["date"] = pd.to_datetime(df["date"]).dt.tz_convert('America/New_York')
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+    
     df = df.drop(columns=["date.#text"])
     df = df.sort_values(by="date")
     df = df.drop_duplicates(ignore_index=True)
@@ -24,6 +28,9 @@ def getTimeOfDay(df):
     print("Transforming Time Data")
 
     df = df[["date.#text"]].copy()
+    #convert timezones
+    df["date.#text"] = pd.to_datetime(df["date.#text"]).dt.tz_localize('gmt')
+    df["date.#text"] = pd.to_datetime(df["date.#text"]).dt.tz_convert('America/New_York')
     df["time"] = pd.to_datetime(df["date.#text"]).dt.time
     df["time_of_day_key"] = df["time"].astype(str).str.replace(":", "").astype(int)
     df["hour"] = pd.to_datetime(df["date.#text"]).dt.hour
@@ -96,6 +103,8 @@ def getListeningFact(tracks):
     print("Transforming Listening Fact Data")
 
     df = tracks[["date.#text", "name", "album.#text", "artist.#text"]].copy()
+    df["date.#text"] = pd.to_datetime(df["date.#text"]).dt.tz_localize('gmt')
+    df["date.#text"] = pd.to_datetime(df["date.#text"]).dt.tz_convert('America/New_York')
     df["date_key"] = pd.to_datetime(df["date.#text"]).dt.date
     df["date_key"] = df["date_key"].astype(str).str.replace("-", "").astype(int)
     df["time_of_day_key"] = pd.to_datetime(df["date.#text"]).dt.time
