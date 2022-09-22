@@ -8,51 +8,54 @@ import time
 import functions
 import transform
 
+# One time historic load processing
 
 
-
-
-# initialize listening history
+# Extract data from Last.fm API
 def init(today_unix, yesterday_unix):
+    print("Extracting data from Last.fm API")
+
     totalPages = 99999 # dummy value
 
     results = []
 
+    # loop through api call pages to get all historic data
     for i in range(1, totalPages):
         if i == 1:
             print("Requesting page " + str(i))
         else:
             print("Requesting page " + str(i) + " of " + str(totalPages))
 
+        # get data from api
         r = functions.lastfm_getRecent({"page": i , "to": today_unix}) 
 
         
-        # check for errors
+        # check for errors codes
         if r.status_code != 200:
             print(r.text)
             break
         
-        # validate response
+        # validate data
         tracks = pd.DataFrame(pd.json_normalize(r.json()['recenttracks']['track']))
         if functions.validate(tracks, True, today_unix, yesterday_unix):
             print("Data valid")
 
-        # set total page number
+        # set total page number on first run
         if i == 1:
             totalPages = int(r.json()["recenttracks"]["@attr"]["totalPages"])
 
         results.append(tracks)
 
-        # check cache
+        # check cache control header to see if we need to wait
         if not getattr(r, 'from_cache', False):
             time.sleep(0.25)
 
+        # range(1, totalPages) is not recalculated per iteration
+        # check if we are on the last page to end loop
         if i == totalPages:
             print("Request complete")
             break
     
-    
-
     # flatten data
     tracks = pd.concat(results)
 
@@ -61,14 +64,15 @@ def init(today_unix, yesterday_unix):
     return tracks
 
 
+# Transform + Load
 def runInit():
+    print("Transforming data")
+
     #time variables
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     yesterday = today - datetime.timedelta(days=1)
     today_unix = int(today.timestamp())
     yesterday_unix = int(yesterday.timestamp())
-
-    # transform
 
     # tracks are in descending date order.
     tracks = init(today_unix, yesterday_unix)
@@ -81,15 +85,20 @@ def runInit():
     artist_group_dim = transform.getArtistGroups(tracks)
     artist_group_bridge = transform.getArtistGroupBridge(artist_dim, artist_group_dim)
 
-    #stage fact table
+    # stage fact table
     listening_fact = transform.getListeningFact(tracks)
 
+    print("Transform complete")
 
-    # load
+    print("Building SQLite Database")
+    # connect to db
     engine = sqlalchemy.create_engine(functions.DATABASE_LOCATION)
     conn = sqlite3.connect(functions.DATABASE_NAME)
     cursor = conn.cursor()
 
+    # build db
+    # unique constraints are placed to make inserting new data for incremental ETL easier
+    # data should already be deduped by the transformation functions
     table_date = """
         CREATE TABLE IF NOT EXISTS date_dim (
             date_key INTEGER PRIMARY KEY NOT NULL,
@@ -167,8 +176,11 @@ def runInit():
     cursor.execute(table_bridge)
     cursor.execute(table_fact)
 
-    print("Opened database successfully")
+    print("Database built successfully")
 
+    print("Loading data into tables")
+
+    # load data
     try:
         date_dim.to_sql("date_dim", engine, index=False, if_exists='append')
         time_of_day_dim.to_sql("time_of_day_dim", engine, index=False, if_exists='append')
@@ -182,4 +194,4 @@ def runInit():
 
 
     conn.close()
-    print("Closed database successfully")
+    print("Data loaded successfully")

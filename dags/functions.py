@@ -6,6 +6,8 @@ import os
 
 import requests_cache
 
+# Database location, name, user agent, and api key are stored in .env file
+
 load_dotenv()
 
 DATABASE_LOCATION = os.getenv("DATABASE_LOCATION")
@@ -14,6 +16,7 @@ USER_AGENT = os.getenv("USER_AGENT")
 API_KEY = os.getenv("API_KEY")
 RECENT_TRACKS_LIMIT = 200
 
+# set up cache to store API responses for 6 hours to speed up duplicate requests
 requests_cache.install_cache('lastfm_cache', backend='sqlite', expire_after=21600)
 
 # Last.fm API wrapper function, takes additional parameters as array.
@@ -34,7 +37,7 @@ def lastfm_getRecent(payload):
     response = requests.get(url, headers=headers, params=payload)
     return response
 
-# print json response
+# print json response for testing purposes
 def jprint(obj):
     # create a formatted string of the Python JSON object
     text = json.dumps(obj, sort_keys=True, indent=4)
@@ -47,7 +50,7 @@ def validate(df, isInit, today_unix, yesterday_unix) -> bool:
         print("No tracks found")
         return False
 
-    # Primary Key Check
+    # check primary key
     if pd.Series(df["date.uts"]).is_unique:
         pass
     else:
