@@ -1,5 +1,5 @@
 .env
 
-*.sqlite
+lastfm_cache.sqlite
 
 __pycache__
