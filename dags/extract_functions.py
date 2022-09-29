@@ -1,27 +1,20 @@
-import pandas as pd
 import requests
-import json
 from dotenv import load_dotenv
 import os
-
-import requests_cache
-
-# Database location, name, user agent, and api key are stored in .env file
-
-load_dotenv()
-
-DATABASE_LOCATION = os.getenv("DATABASE_LOCATION")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
-USER_AGENT = os.getenv("USER_AGENT") 
-API_KEY = os.getenv("API_KEY")
-RECENT_TRACKS_LIMIT = 200
-
-# set up cache to store API responses for 6 hours to speed up duplicate requests
-requests_cache.install_cache('lastfm_cache', backend='sqlite', expire_after=21600)
+import pandas as pd
 
 # Last.fm API wrapper function, takes additional parameters as array.
 # needs method parameter as argument to specify which API method to call
 def lastfm_getRecent(payload):
+
+    # load environment variables
+    load_dotenv()
+
+    USER_AGENT = os.getenv("USER_AGENT") 
+    API_KEY = os.getenv("API_KEY")
+    RECENT_TRACKS_LIMIT = 200
+
+    # create request header
     headers = {
         "user-agent": USER_AGENT
     }
@@ -37,15 +30,9 @@ def lastfm_getRecent(payload):
     response = requests.get(url, headers=headers, params=payload)
     return response
 
-# print json response for testing purposes
-def jprint(obj):
-    # create a formatted string of the Python JSON object
-    text = json.dumps(obj, sort_keys=True, indent=4)
-    print(text)
-
 
 # validate dataframe
-def validate(df, isInit, today_unix, yesterday_unix) -> bool:
+def validate(df, today_unix) -> bool:
     if df.empty:
         print("No tracks found")
         return False
@@ -63,13 +50,7 @@ def validate(df, isInit, today_unix, yesterday_unix) -> bool:
     dates = df["date.uts"].astype(int)
 
     # check datetime constraint
-    if isInit:
-        if dates.max() >= today_unix:
-            raise Exception("Initial load contains excess data.")
-    else:
-        if dates.max() >= today_unix:
-            raise Exception("Update contains data from today.")
-        if dates.min() < yesterday_unix:
-            raise Exception("Update contains data from before yesterday.")
+    if dates.max() >= today_unix:
+        raise Exception("Initial load contains excess data.")
 
     return True

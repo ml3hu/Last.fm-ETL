@@ -1,3 +1,19 @@
+# Todo:
+- Incrementalize ETL into extract, transform, load scripts.
+
+
+- attach staging layer to final sqlite, then migrate data
+- extract db tables as csv
+- airflow sequence
+- edge case: no music listening data
+    - skip if no data using short circuit operator
+- start airflow task from previous date with timedelta 1 day to start on current day
+- make google data studio dashboard using csv
+
+                                                                  failure -> reset
+                success -> extract (update) -------------------->                      
+check exists ->                                                   transform -> load/append to db -> empty stage -> create csv -> gds
+                failure -> extract (init) -> create stage + db ->
 # Last.fm-ETL
 
 ## 1. Objective
