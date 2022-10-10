@@ -13,5 +13,8 @@ def check_initialized():
         conn = sqlite3.connect("file:" + database_name + "?mode=rw", uri=True)
         print("Database found")
         conn.close()
+        return "update_extract"
     except sqlite3.OperationalError:
-        raise Exception("Database not found")
+        pass
+
+    return "initial_extract"

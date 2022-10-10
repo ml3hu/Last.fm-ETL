@@ -7,7 +7,7 @@ import extract_functions as ef
 
 
 # Extract data from Last.fm API, then store files locally
-def extract():
+def update_extract():
     # set up cache to store API responses for 6 hours to speed up duplicate requests during testing
     requests_cache.install_cache('lastfm_cache', backend='sqlite', expire_after=21600)
 
@@ -36,9 +36,8 @@ def extract():
         return False
 
     # save raw data
-    with open("raw/" + str(today) + " page1.json", "w") as outfile:
+    with open("/home/ml3hu/Documents/Last.fm-ETL/dags/raw/" + str(today) + " page1.json", "w") as outfile:
         outfile.write(r.text)
 
     print("Request complete")
     return True
-extract()

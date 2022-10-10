@@ -3,3 +3,7 @@
 lastfm_cache.sqlite
 
 __pycache__
+
+venv
+
+airflow

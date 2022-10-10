@@ -97,5 +97,3 @@ def initialize_database():
 
     build_db(database_name)
     build_db(stage_name)
-
-initialize_database()

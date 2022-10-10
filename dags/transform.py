@@ -5,7 +5,6 @@ import datetime
 import json
 import pandas as pd
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
 
@@ -21,7 +20,7 @@ def read_raw(today):
         else:
             print("Reading in page " + str(i) + " of " + str(total_pages))
         
-        f = open("raw/" + str(today) + " page" + str(i) + ".json")
+        f = open("/home/ml3hu/Documents/Last.fm-ETL/dags/raw/" + str(today) + " page" + str(i) + ".json")
         data = json.load(f)
         results.append(data)
         f.close()
@@ -156,5 +155,3 @@ def transform():
         print(e)
 
     print("Data staged successfully")
-
-transform()
