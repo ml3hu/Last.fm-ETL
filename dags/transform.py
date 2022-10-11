@@ -8,9 +8,9 @@ import sqlalchemy
 from dotenv import load_dotenv
 import os
 
-
+# read from raw data
 def read_raw(today):
-    total_pages = 99999
+    total_pages = 99999 # dummy value
     results = []
 
     # read in data from json files
@@ -20,25 +20,30 @@ def read_raw(today):
         else:
             print("Reading in page " + str(i) + " of " + str(total_pages))
         
+        # change file path to match file path assigned in extract_init.py and extract_update.py
         f = open("/home/ml3hu/Documents/Last.fm-ETL/dags/raw/" + str(today) + " page" + str(i) + ".json")
         data = json.load(f)
         results.append(data)
         f.close()
 
+        # get total pages from first page
         if i == 1:
             total_pages = int(data["recenttracks"]["@attr"]["totalPages"])
-
+        
+        # break loop if last page
+        # this is necessary because range(1, totalPages) is not recalculated per iteration
         if i == total_pages:
             break
 
     # normalize and flatten data data
     tracks = [pd.DataFrame(pd.json_normalize(data["recenttracks"]["track"])) for data in results]
     tracks = pd.concat(tracks)
+
     return tracks
 
 
 
-# transform data to fit date dimension
+# transform data to match date, time, track, artist group dimensions, and fact table
 def transform_data(df):
     print("Transforming Datetime Data")
 
@@ -62,10 +67,8 @@ def transform_data(df):
     df["month"] = pd.to_datetime(df["date"]).dt.month
     df["day"] = pd.to_datetime(df["date"]).dt.day
     df["day_of_week"] = pd.to_datetime(df["date"]).dt.dayofweek
-
-    # df = df[["date_key", "date", "day", "month", "year", "day_of_week"]]
     
-    # trasanform track data
+    # transform track data
     df = df.rename(columns={"name": "track_name", "album.#text": "album_name"})
     # md5 hash of track name and album name for track_key https://docs.getdbt.com/blog/sql-surrogate-keys
     df["track_key"] = df["track_name"] + df["album_name"]
@@ -79,8 +82,9 @@ def transform_data(df):
     
     return df
 
+# transform to match artist dimension
 def transform_artist_data(df):
-    # transform artist data
+    # transform artist group to individual artists
     df = df[["artist_group_name"]].copy()
     df = df["artist_group_name"].str.split(", ")
     df = df.explode("artist_group_name").to_frame()
@@ -92,19 +96,24 @@ def transform_artist_data(df):
 
     return df
 
+# create bridge table between artist group and artist
 def build_bridge(df, artists):
-    # create bridge table between artist group and artist
+    # assign artist group key to each participating artist in group
     df = df[["artist_group_key", "artist_group_name"]].copy()
     df["artist_group_name"] = df["artist_group_name"].str.split(", ")
     df = df.explode("artist_group_name")
+
+    # merge bridge table with artist dimension to get artist key per artist group
     df = df.merge(artists, how="left", left_on="artist_group_name", right_on="artist_name")
     df = df.drop(columns=["artist_group_name", "artist_name"])
     df = df.drop_duplicates(ignore_index=True)
 
+    # select bridge table columns
     df = df[["artist_group_key", "artist_key"]]
 
     return df
 
+# transform data to match dimensions and fact table, then load to staging tables
 def transform():
     print("Transforming Data")
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -112,7 +121,7 @@ def transform():
     # read in raw data
     tracks = read_raw(today)
 
-    # transform
+    # transform record data
     tracks = transform_data(tracks)
 
     # build dimension tables
@@ -130,19 +139,17 @@ def transform():
     # build fact table
     listening_fact = tracks[["date_key", "time_of_day_key", "track_key", "artist_group_key"]]
 
-    # load to staging area
-    print("Loading to Staging Area")
-
     # get env variables
     load_dotenv()
     stage_location = os.getenv("STAGE_LOCATION")
 
+    # load to staging area
+    print("Loading to Staging Area")
+
+    # connect to db engine
     engine = sqlalchemy.create_engine(stage_location)
 
     # load data to tables
-    # new connection needs to be established each time to avoid locking
-    # data is first loaded to a temp table, then inserted into the main table to avoid duplicate data
-    # without having to insert 1 row at a time from python to sqlite
     try:
         date_dim.to_sql("date_dim", engine, index=False, if_exists='append')
         time_of_day_dim.to_sql("time_of_day_dim", engine, index=False, if_exists='append')
@@ -152,6 +159,7 @@ def transform():
         artist_group_bridge.to_sql("artist_group_bridge", engine, index=False, if_exists='append')
         listening_fact.to_sql("listening_fact", engine, index=False, if_exists='append')
     except Exception as e:
-        print(e)
+        # raise exception if error occurs
+        raise e
 
     print("Data staged successfully")

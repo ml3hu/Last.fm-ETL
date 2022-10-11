@@ -3,12 +3,13 @@ import os
 import sqlite3
 
 # check if sqlite database already exists
-# if not, raise exception
+# returns the name of the next airflow task for BranchPythonOperator to select
 def check_initialized():
     load_dotenv()
     database_name = os.getenv("DATABASE_NAME")
 
-    # if db does not exist, raise exception to fail airflow task
+    # if exists, proceed with update task stream
+    # else, proceed with initialization task stream
     try:
         conn = sqlite3.connect("file:" + database_name + "?mode=rw", uri=True)
         print("Database found")

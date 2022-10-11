@@ -33,23 +33,27 @@ def lastfm_getRecent(payload):
 
 # validate dataframe
 def validate(df, today_unix) -> bool:
+    # check for empty dataframe, returns false for ShortCircuitOperator to skip downstream tasks
     if df.empty:
         print("No tracks found")
         return False
 
-    # check primary key
+    # check primary key uniqueness
     if pd.Series(df["date.uts"]).is_unique:
         pass
     else:
         raise Exception("Primary Key Check is violated.")
 
     # check for nulls
+    # Last.fm API should not return nulls, 
+    # if nulls are found, the data is invalid
     if df.isnull().values.any():
         raise Exception("Null values found.")
     
     dates = df["date.uts"].astype(int)
 
     # check datetime constraint
+    # no tracks should have a timestamp greater than today's date
     if dates.max() >= today_unix:
         raise Exception("Initial load contains excess data.")
 
